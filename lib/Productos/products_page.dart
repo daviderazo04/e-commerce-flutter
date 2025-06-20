@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:paws_and_tails/Productos/Carrito.dart';
 import 'package:paws_and_tails/Productos/ProductDetailPage.dart';
 import 'package:paws_and_tails/dtos/producto_dto.dart';
+import 'package:paws_and_tails/usuarios/perfil.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({Key? key}) : super(key: key);
@@ -144,6 +145,15 @@ class _ProductsPageState extends State<ProductsPage> {
                   ),
                 ),
             ],
+          ),
+          IconButton(
+            icon: Icon(Icons.account_circle),
+            onPressed: () async {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PerfilPage()),
+              );
+            },
           ),
         ],
       ),
