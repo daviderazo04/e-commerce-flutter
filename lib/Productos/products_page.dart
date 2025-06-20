@@ -225,17 +225,23 @@ class _ProductsPageState extends State<ProductsPage> {
                                     '${product.descripcion}\n\$${product.precio.toStringAsFixed(2)}'),
                                 isThreeLine: true,
                                 onTap: () async {
-                                  final added = await Navigator.push(
+                                  final dynamic cantidadSeleccionada =
+                                      await Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => ProductDetailPage(
                                         product: product,
-                                        onAddToCart: (int quantity) {},
                                       ),
                                     ),
                                   );
-                                  if (added == true) {
-                                    _incrementCart(product);
+                                  if (cantidadSeleccionada != null &&
+                                      cantidadSeleccionada > 0) {
+                                    setState(() {
+                                      cart[product] = (cart[product] ?? 0) +
+                                          (cantidadSeleccionada as int);
+                                      cartCount =
+                                          cart.values.fold(0, (a, b) => a + b);
+                                    });
                                   }
                                 },
                               ),

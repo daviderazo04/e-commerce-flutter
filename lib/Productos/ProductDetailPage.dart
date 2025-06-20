@@ -3,12 +3,10 @@ import 'package:paws_and_tails/dtos/producto_dto.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final ProductDto product;
-  final Function(int) onAddToCart;
 
   const ProductDetailPage({
     Key? key,
     required this.product,
-    required this.onAddToCart,
   }) : super(key: key);
 
   @override
@@ -105,8 +103,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        widget.onAddToCart(cantidad);
-                        Navigator.pop(context, true);
+                        Navigator.pop(context, cantidad); // cantidad es int
                       },
                       child: const Text('Añadir al carrito'),
                     ),
