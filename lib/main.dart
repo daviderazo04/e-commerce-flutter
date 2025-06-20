@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:paws_and_tails/Productos/products_page.dart';
+import 'package:paws_and_tails/usuarios/login.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Paws & Tails',
       theme: ThemeData(primarySwatch: Colors.teal),
-      home: const ProductsPage(),
+      home: const LoginPage(),
       debugShowCheckedModeBanner: false,
     );
   }
