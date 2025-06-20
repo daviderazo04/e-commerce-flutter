@@ -1,42 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:paws_and_tails/Productos/Carrito.dart';
 import 'package:paws_and_tails/Productos/ProductDetailPage.dart';
-
-class Product {
-  final int id;
-  final String categoria;
-  final String nombre;
-  final String descripcion;
-  final double precio;
-  final int stock;
-  final String proveedor;
-  final List<String> imagenes;
-
-  Product({
-    required this.id,
-    required this.categoria,
-    required this.nombre,
-    required this.descripcion,
-    required this.precio,
-    required this.stock,
-    required this.proveedor,
-    required this.imagenes,
-  });
-
-  factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['idProducto'],
-      categoria: json['prodCategoria'],
-      nombre: json['prodNombre'],
-      descripcion: json['prodDescripcion'],
-      precio: (json['prodPrecio'] as num).toDouble(),
-      stock: json['prodStock'],
-      proveedor: json['prodProveedor'],
-      imagenes: List<String>.from(json['prodImg']),
-    );
-  }
-}
+import 'package:paws_and_tails/dtos/producto_dto.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({Key? key}) : super(key: key);
@@ -46,8 +13,9 @@ class ProductsPage extends StatefulWidget {
 }
 
 class _ProductsPageState extends State<ProductsPage> {
-  List<Product> allProducts = [];
-  List<Product> filteredProducts = [];
+  int cartCount = 0;
+  List<ProductDto> allProducts = [];
+  List<ProductDto> filteredProducts = [];
   List<String> categories = [];
   String searchQuery = '';
   String selectedCategory = 'Todas';
@@ -55,6 +23,9 @@ class _ProductsPageState extends State<ProductsPage> {
   double maxPrice = 1000;
   RangeValues selectedPriceRange = const RangeValues(0, 1000);
   bool isLoading = true;
+
+  // Aquí defines el carrito:
+  final Map<ProductDto, int> cart = {};
 
   @override
   void initState() {
@@ -67,7 +38,7 @@ class _ProductsPageState extends State<ProductsPage> {
         Uri.parse('http://backendpawstails.runasp.net/api/gestion/productos'));
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      allProducts = data.map((json) => Product.fromJson(json)).toList();
+      allProducts = data.map((json) => ProductDto.fromJson(json)).toList();
 
       // Obtener categorías únicas
       final uniqueCategories =
@@ -121,11 +92,60 @@ class _ProductsPageState extends State<ProductsPage> {
     applyFilters();
   }
 
+  void _incrementCart(ProductDto product) {
+    setState(() {
+      cart[product] = (cart[product] ?? 0) + 1;
+      cartCount = cart.values.fold(0, (a, b) => a + b);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Productos'),
+        title: Text('Productos'),
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.shopping_cart),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CartPage(cart: cart),
+                    ),
+                  );
+                },
+              ),
+              if (cartCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$cartCount',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -204,16 +224,19 @@ class _ProductsPageState extends State<ProductsPage> {
                                 subtitle: Text(
                                     '${product.descripcion}\n\$${product.precio.toStringAsFixed(2)}'),
                                 isThreeLine: true,
-                                onTap: () {
-                                  Navigator.push(
+                                onTap: () async {
+                                  final added = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => ProductDetailPage(
                                         product: product,
-                                        onAddToCart: () {},
+                                        onAddToCart: (int quantity) {},
                                       ),
                                     ),
                                   );
+                                  if (added == true) {
+                                    _incrementCart(product);
+                                  }
                                 },
                               ),
                             );
