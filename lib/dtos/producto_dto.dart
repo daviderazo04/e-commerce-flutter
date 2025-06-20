@@ -31,4 +31,15 @@ class ProductDto {
       imagenes: List<String>.from(json['prodImg']),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'idProducto': id,
+        'prodCategoria': categoria,
+        'prodNombre': nombre,
+        'prodDescripcion': descripcion,
+        'prodPrecio': precio,
+        'prodStock': stock,
+        'prodProveedor': proveedor,
+        'prodImg': imagenes,
+      };
 }

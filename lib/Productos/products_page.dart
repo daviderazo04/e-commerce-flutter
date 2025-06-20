@@ -5,6 +5,7 @@ import 'package:paws_and_tails/Productos/Carrito.dart';
 import 'package:paws_and_tails/Productos/ProductDetailPage.dart';
 import 'package:paws_and_tails/dtos/producto_dto.dart';
 import 'package:paws_and_tails/usuarios/perfil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({Key? key}) : super(key: key);
@@ -32,6 +33,7 @@ class _ProductsPageState extends State<ProductsPage> {
   void initState() {
     super.initState();
     fetchProducts();
+    loadCart();
   }
 
   Future<void> fetchProducts() async {
@@ -93,11 +95,39 @@ class _ProductsPageState extends State<ProductsPage> {
     applyFilters();
   }
 
-  void _incrementCart(ProductDto product) {
+  void _incrementCart(ProductDto product, int cantidad) {
     setState(() {
-      cart[product] = (cart[product] ?? 0) + 1;
+      cart[product] = (cart[product] ?? 0) + cantidad;
       cartCount = cart.values.fold(0, (a, b) => a + b);
     });
+    saveCart();
+  }
+
+  Future<void> saveCart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartList = cart.entries
+        .map((e) => {
+              'product': e.key.toJson(),
+              'quantity': e.value,
+            })
+        .toList();
+    await prefs.setString('cart', jsonEncode(cartList));
+  }
+
+  Future<void> loadCart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartString = prefs.getString('cart');
+    if (cartString != null) {
+      final List<dynamic> cartList = jsonDecode(cartString);
+      cart.clear();
+      for (var item in cartList) {
+        final product = ProductDto.fromJson(item['product']);
+        final quantity = item['quantity'] as int;
+        cart[product] = quantity;
+      }
+      cartCount = cart.values.fold(0, (a, b) => a + b);
+      setState(() {});
+    }
   }
 
   @override

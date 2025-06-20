@@ -33,6 +33,7 @@ class _PerfilPageState extends State<PerfilPage> {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('userData');
+    await prefs.remove('cart');
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),
