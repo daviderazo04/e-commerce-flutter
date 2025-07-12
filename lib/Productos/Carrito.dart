@@ -1,15 +1,51 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:paws_and_tails/dtos/producto_dto.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
-class CartPage extends StatelessWidget {
+// Helper para obtener la cédula del usuario loggeado
+Future<String> obtenerCedulaUsuario() async {
+  final prefs = await SharedPreferences.getInstance();
+  final userData = prefs.getString('userData');
+  if (userData != null) {
+    final userMap = json.decode(userData);
+    return userMap['Cedula'] ?? '';
+  }
+  throw Exception('No hay usuario loggeado');
+}
+
+// Obtener cuentas del usuario
+Future<List<Map<String, dynamic>>> fetchCuentasUsuario() async {
+  final cedula = await obtenerCedulaUsuario();
+  final url =
+      'http://backendpawstails.runasp.net/api/gestion/usuario/cuentas-cliente/$cedula';
+  final response = await http.get(Uri.parse(url));
+  if (response.statusCode == 200) {
+    final cuentas = json.decode(response.body) as List;
+    return cuentas.cast<Map<String, dynamic>>();
+  } else {
+    throw Exception('Error al cargar cuentas');
+  }
+}
+
+class CartPage extends StatefulWidget {
   final Map<ProductDto, int> cart;
 
   const CartPage({Key? key, required this.cart}) : super(key: key);
 
   @override
+  State<CartPage> createState() => _CartPageState();
+}
+
+class _CartPageState extends State<CartPage> {
+  int? cuentaSeleccionada;
+  double? saldoSeleccionado;
+
+  @override
   Widget build(BuildContext context) {
     double subtotal = 0;
-    cart.forEach((product, quantity) {
+    widget.cart.forEach((product, quantity) {
       subtotal += product.precio * quantity;
     });
     double iva = subtotal * 0.15;
@@ -19,13 +55,13 @@ class CartPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Carrito de compras'),
       ),
-      body: cart.isEmpty
+      body: widget.cart.isEmpty
           ? const Center(child: Text('El carrito está vacío'))
           : Column(
               children: [
                 Expanded(
                   child: ListView(
-                    children: cart.entries.map((entry) {
+                    children: widget.cart.entries.map((entry) {
                       final product = entry.key;
                       final quantity = entry.value;
                       return ListTile(
@@ -46,6 +82,56 @@ class CartPage extends StatelessWidget {
                   ),
                 ),
                 const Divider(),
+                // ComboBox de cuentas
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: fetchCuentasUsuario(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(),
+                      );
+                    } else if (snapshot.hasError) {
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child:
+                            Text('Error al cargar cuentas: ${snapshot.error}'),
+                      );
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text('No tienes cuentas registradas.'),
+                      );
+                    }
+                    final cuentas = snapshot.data!;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: DropdownButtonFormField<int>(
+                        decoration: const InputDecoration(
+                          labelText: 'Selecciona una cuenta para pagar',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: cuentaSeleccionada,
+                        items: cuentas.map((cuenta) {
+                          return DropdownMenuItem<int>(
+                            value: cuenta['cuenta_id'],
+                            child: Text(
+                              'Cuenta #${cuenta['cuenta_id']} - Saldo: \$${cuenta['saldo'].toStringAsFixed(2)}',
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          final cuenta = cuentas
+                              .firstWhere((c) => c['cuenta_id'] == value);
+                          setState(() {
+                            cuentaSeleccionada = value;
+                            saldoSeleccionado = cuenta['saldo']?.toDouble();
+                          });
+                        },
+                      ),
+                    );
+                  },
+                ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -81,23 +167,26 @@ class CartPage extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('¡Gracias por tu compra!'),
-                                content: const Text(
-                                    'El pago se ha realizado con éxito.'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                          onPressed: cuentaSeleccionada == null
+                              ? null
+                              : () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title:
+                                          const Text('¡Gracias por tu compra!'),
+                                      content: const Text(
+                                          'El pago se ha realizado con éxito.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                          child: const Text('OK'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                           child: const Text('Pagar'),
                         ),
                       ),
