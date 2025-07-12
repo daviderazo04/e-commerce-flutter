@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:paws_and_tails/dtos/producto_dto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 // Helper para obtener la cédula del usuario loggeado
 Future<String> obtenerCedulaUsuario() async {
@@ -29,6 +29,109 @@ Future<List<Map<String, dynamic>>> fetchCuentasUsuario() async {
   }
 }
 
+Future<int> obtenerIdUsuario() async {
+  final prefs = await SharedPreferences.getInstance();
+  final userData = prefs.getString('userData');
+  if (userData != null) {
+    final userMap = json.decode(userData);
+    return userMap['IdUsuario'] ?? 0;
+  }
+  throw Exception('No hay usuario loggeado');
+}
+
+Future<void> realizarCompra({
+  required Map<ProductDto, int> cart,
+  required int cuentaId,
+  required BuildContext context,
+  required String direccion,
+  required VoidCallback onCompraExitosa,
+}) async {
+  final idUsuario = await obtenerIdUsuario();
+
+  final productos = cart.entries.map((entry) {
+    return {
+      "<idProducto>k__BackingField": entry.key.id,
+      "<cantidad>k__BackingField": entry.value,
+    };
+  }).toList();
+
+  final body = {
+    "Carrito": {
+      "<productos>k__BackingField": productos,
+    },
+    "Direccion": direccion,
+    "MetodoPago": "Transferencia",
+    "IdUsuario": idUsuario,
+    "cuenta": cuentaId,
+  };
+
+  // Mostrar dialogo de cargando
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+
+  final response = await http.post(
+    Uri.parse('https://backendpawstails.runasp.net/api/gestion/compra'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode(body),
+  );
+
+  // Cerrar el dialogo de cargando
+  Navigator.of(context, rootNavigator: true).pop();
+
+  if (response.statusCode == 200) {
+    final result = response.body.trim().toLowerCase();
+    if (result == 'true') {
+      onCompraExitosa();
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('¡Gracias por tu compra!'),
+          content: const Text('El pago se ha realizado con éxito.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text('Algo falló al realizar la compra.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  } else {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text('No se pudo realizar la compra: ${response.body}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class CartPage extends StatefulWidget {
   final Map<ProductDto, int> cart;
 
@@ -41,6 +144,13 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   int? cuentaSeleccionada;
   double? saldoSeleccionado;
+  final TextEditingController direccionController = TextEditingController();
+
+  @override
+  void dispose() {
+    direccionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,6 +242,17 @@ class _CartPageState extends State<CartPage> {
                     );
                   },
                 ),
+                // Campo para dirección de envío
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextField(
+                    controller: direccionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Dirección de envío',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -167,24 +288,21 @@ class _CartPageState extends State<CartPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: cuentaSeleccionada == null
+                          onPressed: cuentaSeleccionada == null ||
+                                  direccionController.text.trim().isEmpty
                               ? null
-                              : () {
-                                  showDialog(
+                              : () async {
+                                  await realizarCompra(
+                                    cart: widget.cart,
+                                    cuentaId: cuentaSeleccionada!,
                                     context: context,
-                                    builder: (context) => AlertDialog(
-                                      title:
-                                          const Text('¡Gracias por tu compra!'),
-                                      content: const Text(
-                                          'El pago se ha realizado con éxito.'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(),
-                                          child: const Text('OK'),
-                                        ),
-                                      ],
-                                    ),
+                                    direccion: direccionController.text.trim(),
+                                    onCompraExitosa: () {
+                                      setState(() {
+                                        widget.cart.clear();
+                                        direccionController.clear();
+                                      });
+                                    },
                                   );
                                 },
                           child: const Text('Pagar'),
