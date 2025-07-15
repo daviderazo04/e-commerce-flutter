@@ -26,7 +26,6 @@ class _ProductsPageState extends State<ProductsPage> {
   RangeValues selectedPriceRange = const RangeValues(0, 1000);
   bool isLoading = true;
 
-  // Aquí defines el carrito:
   final Map<ProductDto, int> cart = {};
 
   @override
@@ -43,12 +42,10 @@ class _ProductsPageState extends State<ProductsPage> {
       final List<dynamic> data = jsonDecode(response.body);
       allProducts = data.map((json) => ProductDto.fromJson(json)).toList();
 
-      // Obtener categorías únicas
       final uniqueCategories =
           allProducts.map((p) => p.categoria).toSet().toList();
       categories = ['Todas', ...uniqueCategories];
 
-      // Obtener precios min y max
       if (allProducts.isNotEmpty) {
         minPrice =
             allProducts.map((p) => p.precio).reduce((a, b) => a < b ? a : b);
@@ -57,7 +54,9 @@ class _ProductsPageState extends State<ProductsPage> {
         selectedPriceRange = RangeValues(minPrice, maxPrice);
       }
 
-      isLoading = false;
+      setState(() {
+        isLoading = false;
+      });
       applyFilters();
     } else {
       throw Exception('Error al cargar productos');
@@ -91,7 +90,9 @@ class _ProductsPageState extends State<ProductsPage> {
   }
 
   void onPriceRangeChanged(RangeValues values) {
-    selectedPriceRange = values;
+    setState(() {
+      selectedPriceRange = values;
+    });
     applyFilters();
   }
 
@@ -132,14 +133,29 @@ class _ProductsPageState extends State<ProductsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final Color primaryColor = Colors.blue.shade700;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Productos'),
+        backgroundColor: primaryColor,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: Image.asset(
+            'assets/images/logoPataBlanco.png',
+            height: 30,
+          ),
+        ),
+        title: const Text(
+          'Productos',
+          style: TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
         actions: [
           Stack(
             children: [
               IconButton(
-                icon: Icon(Icons.shopping_cart),
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
                 onPressed: () async {
                   final result = await Navigator.push(
                     context,
@@ -149,10 +165,7 @@ class _ProductsPageState extends State<ProductsPage> {
                   );
                   if (result == 'compra_exitosa') {
                     await loadCart();
-                    setState(() {});
-                    // Se elimina el showDialog de compra exitosa
                   } else {
-                    // Solo actualiza el contador si no hubo compra
                     setState(() {
                       cartCount = cart.values.fold(0, (a, b) => a + b);
                     });
@@ -164,18 +177,18 @@ class _ProductsPageState extends State<ProductsPage> {
                   right: 6,
                   top: 6,
                   child: Container(
-                    padding: EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: Colors.red,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    constraints: BoxConstraints(
+                    constraints: const BoxConstraints(
                       minWidth: 16,
                       minHeight: 16,
                     ),
                     child: Text(
                       '$cartCount',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -187,7 +200,7 @@ class _ProductsPageState extends State<ProductsPage> {
             ],
           ),
           IconButton(
-            icon: Icon(Icons.account_circle),
+            icon: const Icon(Icons.account_circle, color: Colors.white),
             onPressed: () async {
               Navigator.push(
                 context,
@@ -201,106 +214,298 @@ class _ProductsPageState extends State<ProductsPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Buscador
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    decoration: const InputDecoration(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextFormField(
+                    decoration: InputDecoration(
                       labelText: 'Buscar producto',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+                      labelStyle: TextStyle(color: primaryColor),
+                      prefixIcon: Icon(Icons.search, color: primaryColor),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide:
+                            BorderSide(color: primaryColor.withOpacity(0.5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide(color: primaryColor, width: 2.0),
+                      ),
                     ),
                     onChanged: onSearchChanged,
                   ),
                 ),
-                // Filtro por categoría
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Categoría',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: selectedCategory,
-                    items: categories
-                        .map((cat) =>
-                            DropdownMenuItem(value: cat, child: Text(cat)))
-                        .toList(),
-                    onChanged: onCategoryChanged,
-                    isExpanded: true,
-                  ),
-                ),
-                // Filtro por precio
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      const Text('Filtrar por precio'),
-                      RangeSlider(
-                        values: selectedPriceRange,
-                        min: minPrice,
-                        max: maxPrice,
-                        divisions: 20,
-                        labels: RangeLabels(
-                          '\$${selectedPriceRange.start.toStringAsFixed(2)}',
-                          '\$${selectedPriceRange.end.toStringAsFixed(2)}',
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: _buildFilterChip(
+                            label: 'Categoría',
+                            onTap: () =>
+                                _showCategoryFilter(context, primaryColor),
+                            icon: Icons.category,
+                            primaryColor: primaryColor,
+                          ),
                         ),
-                        onChanged: (values) =>
-                            setState(() => onPriceRangeChanged(values)),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: _buildFilterChip(
+                            label: 'Precio',
+                            onTap: () =>
+                                _showPriceFilter(context, primaryColor),
+                            icon: Icons.attach_money,
+                            primaryColor: primaryColor,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const Divider(),
-                // Lista de productos
+                const SizedBox(height: 16),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                const SizedBox(height: 8),
                 Expanded(
                   child: filteredProducts.isEmpty
                       ? const Center(
-                          child: Text('No hay productos que coincidan'))
+                          child: Text('No hay productos que coincidan',
+                              style: TextStyle(fontSize: 16)))
                       : ListView.builder(
                           itemCount: filteredProducts.length,
                           itemBuilder: (context, index) {
                             final product = filteredProducts[index];
-                            return Card(
-                              margin: const EdgeInsets.all(8),
-                              child: ListTile(
-                                leading: product.imagenes.isNotEmpty
-                                    ? Image.network(product.imagenes[0],
-                                        width: 60,
-                                        height: 60,
-                                        fit: BoxFit.cover)
-                                    : const Icon(Icons.pets),
-                                title: Text(product.nombre),
-                                subtitle: Text(
-                                    '${product.descripcion}\n\$${product.precio.toStringAsFixed(2)}'),
-                                isThreeLine: true,
-                                onTap: () async {
-                                  final dynamic cantidadSeleccionada =
-                                      await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ProductDetailPage(
-                                        product: product,
-                                      ),
-                                    ),
-                                  );
-                                  if (cantidadSeleccionada != null &&
-                                      cantidadSeleccionada > 0) {
-                                    setState(() {
-                                      cart[product] = (cart[product] ?? 0) +
-                                          (cantidadSeleccionada as int);
-                                      cartCount =
-                                          cart.values.fold(0, (a, b) => a + b);
-                                    });
-                                  }
-                                },
-                              ),
-                            );
+                            return _buildProductCard(product, primaryColor);
                           },
                         ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required VoidCallback onTap,
+    required IconData icon,
+    required Color primaryColor,
+  }) {
+    return ActionChip(
+      avatar: Icon(icon, color: primaryColor),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      onPressed: onTap,
+      backgroundColor: primaryColor.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: primaryColor.withOpacity(0.5)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    );
+  }
+
+  void _showCategoryFilter(BuildContext context, Color primaryColor) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Selecciona una categoría',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final cat = categories[index];
+                    return RadioListTile<String>(
+                      title: Text(cat),
+                      value: cat,
+                      groupValue: selectedCategory,
+                      onChanged: (value) {
+                        onCategoryChanged(value);
+                        Navigator.pop(context);
+                      },
+                      activeColor: primaryColor,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPriceFilter(BuildContext context, Color primaryColor) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter modalSetState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Filtrar por precio',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '\$${selectedPriceRange.start.toStringAsFixed(0)} - \$${selectedPriceRange.end.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                  ),
+                  RangeSlider(
+                    values: selectedPriceRange,
+                    min: minPrice,
+                    max: maxPrice,
+                    divisions: (maxPrice - minPrice).round(),
+                    activeColor: primaryColor,
+                    inactiveColor: primaryColor.withOpacity(0.3),
+                    onChanged: (values) {
+                      modalSetState(() {
+                        selectedPriceRange = values;
+                      });
+                      onPriceRangeChanged(values);
+                    },
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Aplicar',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProductCard(ProductDto product, Color primaryColor) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () async {
+          final dynamic cantidadSeleccionada = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProductDetailPage(
+                product: product,
+              ),
+            ),
+          );
+          if (cantidadSeleccionada != null && cantidadSeleccionada > 0) {
+            _incrementCart(product, cantidadSeleccionada as int);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: product.imagenes.isNotEmpty
+                    ? Image.network(
+                        product.imagenes[0],
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey.shade200,
+                        child: Icon(Icons.pets,
+                            color: primaryColor.withOpacity(0.7)),
+                      ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.nombre,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${product.precio.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      product.descripcion,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
