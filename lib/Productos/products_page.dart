@@ -117,17 +117,17 @@ class _ProductsPageState extends State<ProductsPage> {
   Future<void> loadCart() async {
     final prefs = await SharedPreferences.getInstance();
     final cartString = prefs.getString('cart');
-    if (cartString != null) {
+    cart.clear();
+    if (cartString != null && cartString.isNotEmpty) {
       final List<dynamic> cartList = jsonDecode(cartString);
-      cart.clear();
       for (var item in cartList) {
         final product = ProductDto.fromJson(item['product']);
         final quantity = item['quantity'] as int;
         cart[product] = quantity;
       }
-      cartCount = cart.values.fold(0, (a, b) => a + b);
-      setState(() {});
     }
+    cartCount = cart.values.fold(0, (a, b) => a + b);
+    setState(() {});
   }
 
   @override
@@ -140,13 +140,23 @@ class _ProductsPageState extends State<ProductsPage> {
             children: [
               IconButton(
                 icon: Icon(Icons.shopping_cart),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => CartPage(cart: cart),
                     ),
                   );
+                  if (result == 'compra_exitosa') {
+                    await loadCart();
+                    setState(() {});
+                    // Se elimina el showDialog de compra exitosa
+                  } else {
+                    // Solo actualiza el contador si no hubo compra
+                    setState(() {
+                      cartCount = cart.values.fold(0, (a, b) => a + b);
+                    });
+                  }
                 },
               ),
               if (cartCount > 0)

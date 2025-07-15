@@ -81,25 +81,14 @@ Future<void> realizarCompra({
   );
 
   // Cerrar el dialogo de cargando
+  // Usar el contexto que nos dio showDialog
   Navigator.of(context, rootNavigator: true).pop();
 
   if (response.statusCode == 200) {
     final result = response.body.trim().toLowerCase();
     if (result == 'true') {
       onCompraExitosa();
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('¡Gracias por tu compra!'),
-          content: const Text('El pago se ha realizado con éxito.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+      // ¡IMPORTANTE! Se movió la lógica del AlertDialog a la función de callback.
     } else {
       showDialog(
         context: context,
@@ -152,6 +141,17 @@ class _CartPageState extends State<CartPage> {
     super.dispose();
   }
 
+  Future<void> saveCart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartList = widget.cart.entries
+        .map((e) => {
+              'product': e.key.toJson(),
+              'quantity': e.value,
+            })
+        .toList();
+    await prefs.setString('cart', jsonEncode(cartList));
+  }
+
   @override
   Widget build(BuildContext context) {
     double subtotal = 0;
@@ -183,8 +183,23 @@ class _CartPageState extends State<CartPage> {
                         subtitle: Text(
                           'Cantidad: $quantity\nPrecio: \$${product.precio.toStringAsFixed(2)}',
                         ),
-                        trailing: Text(
-                          'Subtotal: \$${(product.precio * quantity).toStringAsFixed(2)}',
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Subtotal: \$${(product.precio * quantity).toStringAsFixed(2)}',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Quitar del carrito',
+                              onPressed: () {
+                                setState(() {
+                                  widget.cart.remove(product);
+                                });
+                                saveCart();
+                              },
+                            ),
+                          ],
                         ),
                         isThreeLine: true,
                       );
@@ -297,11 +312,35 @@ class _CartPageState extends State<CartPage> {
                                     cuentaId: cuentaSeleccionada!,
                                     context: context,
                                     direccion: direccionController.text.trim(),
-                                    onCompraExitosa: () {
+                                    onCompraExitosa: () async {
                                       setState(() {
                                         widget.cart.clear();
                                         direccionController.clear();
                                       });
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.remove('cart');
+                                      // Después de esto, se muestra el dialogo y luego se navega
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text(
+                                              '¡Gracias por tu compra!'),
+                                          content: const Text(
+                                              'El pago se ha realizado con éxito.'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.of(context)
+                                                    .pop(); // Cierra el AlertDialog
+                                                Navigator.of(context).pop(
+                                                    'compra_exitosa'); // Cierra la pantalla del carrito
+                                              },
+                                              child: const Text('OK'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
                                     },
                                   );
                                 },
