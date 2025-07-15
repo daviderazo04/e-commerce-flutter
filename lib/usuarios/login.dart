@@ -48,7 +48,6 @@ class _LoginPageState extends State<LoginPage> {
 
     final body = response.body.trim();
     if (response.statusCode == 200 && body != 'null' && body.isNotEmpty) {
-      // Login exitoso
       final userData = jsonDecode(body);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userData', jsonEncode(userData));
@@ -66,42 +65,137 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Definimos un color principal para el tema
+    final Color primaryColor = Colors.blue.shade700;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar Sesión')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      // Eliminamos el AppBar para un diseño más limpio y moderno
+      // appBar: AppBar(title: const Text('Iniciar Sesión')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
+            // Centramos los elementos verticalmente
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Espacio superior para separación
+              SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+
+              // Agregamos el logo
+              Image.asset(
+                'assets/images/logoSinFondo.png',
+                height: 150, // Ajusta el tamaño del logo
+              ),
+              const SizedBox(height: 16),
+
+              // Mensaje de bienvenida
+              Text(
+                '¡Hola de nuevo!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Inicia sesión en tu cuenta',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Campo de Correo con diseño mejorado
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Correo'),
-                onChanged: (v) => correo = v,
+                decoration: InputDecoration(
+                  labelText: 'Correo electrónico',
+                  labelStyle: TextStyle(color: primaryColor),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide:
+                        BorderSide(color: primaryColor.withOpacity(0.5)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: BorderSide(color: primaryColor, width: 2.0),
+                  ),
+                ),
+                onChanged: (v) => correo =
+                    v, // Recuerdo: Es mejor usar setState() o TextEditingController
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Ingrese su correo' : null,
               ),
+              const SizedBox(height: 16),
+
+              // Campo de Contraseña con diseño mejorado
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Contraseña'),
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  labelStyle: TextStyle(color: primaryColor),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide:
+                        BorderSide(color: primaryColor.withOpacity(0.5)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    borderSide: BorderSide(color: primaryColor, width: 2.0),
+                  ),
+                ),
                 obscureText: true,
-                onChanged: (v) => password = v,
+                onChanged: (v) => password =
+                    v, // Recuerdo: Es mejor usar setState() o TextEditingController
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Ingrese su contraseña' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+
+              // Mensaje de error
               if (errorMsg != null)
-                Text(errorMsg!, style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 16),
+                Text(
+                  errorMsg!,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              if (errorMsg != null) const SizedBox(height: 16),
+
+              // Botón de Ingresar
               isLoading
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          login();
-                        }
-                      },
-                      child: const Text('Ingresar'),
+                  ? CircularProgressIndicator(color: primaryColor)
+                  : SizedBox(
+                      width: double.infinity, // Ocupa todo el ancho
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 5,
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            login();
+                          }
+                        },
+                        child: const Text(
+                          'Ingresar',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
                     ),
+              const SizedBox(height: 24),
+
+              // Botón de registro
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -109,7 +203,13 @@ class _LoginPageState extends State<LoginPage> {
                     MaterialPageRoute(builder: (_) => const RegisterPage()),
                   );
                 },
-                child: const Text('¿No tienes cuenta? Regístrate'),
+                child: Text(
+                  '¿No tienes cuenta? Regístrate',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
