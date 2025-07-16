@@ -81,24 +81,24 @@ Future<void> realizarCompra({
   );
 
   // Cerrar el dialogo de cargando
-  // Usar el contexto que nos dio showDialog
   Navigator.of(context, rootNavigator: true).pop();
 
   if (response.statusCode == 200) {
     final result = response.body.trim().toLowerCase();
     if (result == 'true') {
       onCompraExitosa();
-      // ¡IMPORTANTE! Se movió la lógica del AlertDialog a la función de callback.
     } else {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: const Text('Algo falló al realizar la compra.'),
+          backgroundColor: Colors.grey.shade800,
+          title: const Text('Error', style: TextStyle(color: Colors.white)),
+          content: const Text('Algo falló al realizar la compra.',
+              style: TextStyle(color: Colors.white70)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
+              child: const Text('OK', style: TextStyle(color: Colors.blue)),
             ),
           ],
         ),
@@ -108,12 +108,14 @@ Future<void> realizarCompra({
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Error'),
-        content: Text('No se pudo realizar la compra: ${response.body}'),
+        backgroundColor: Colors.grey.shade800,
+        title: const Text('Error', style: TextStyle(color: Colors.white)),
+        content: Text('No se pudo realizar la compra: ${response.body}',
+            style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: const Text('OK', style: TextStyle(color: Colors.blue)),
           ),
         ],
       ),
@@ -134,6 +136,7 @@ class _CartPageState extends State<CartPage> {
   int? cuentaSeleccionada;
   double? saldoSeleccionado;
   final TextEditingController direccionController = TextEditingController();
+  final Color primaryColor = Colors.blue.shade700;
 
   @override
   void dispose() {
@@ -162,148 +165,243 @@ class _CartPageState extends State<CartPage> {
     double total = subtotal + iva;
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade900,
       appBar: AppBar(
-        title: const Text('Carrito de compras'),
+        backgroundColor: primaryColor,
+        elevation: 0,
+        title: const Text(
+          'Carrito de compras',
+          style: TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
       body: widget.cart.isEmpty
-          ? const Center(child: Text('El carrito está vacío'))
+          ? const Center(
+              child: Text(
+                'El carrito está vacío',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+            )
           : Column(
               children: [
                 Expanded(
                   child: ListView(
+                    padding: const EdgeInsets.all(16.0),
                     children: widget.cart.entries.map((entry) {
                       final product = entry.key;
                       final quantity = entry.value;
-                      return ListTile(
-                        leading: product.imagenes.isNotEmpty
-                            ? Image.network(product.imagenes[0],
-                                width: 50, height: 50, fit: BoxFit.cover)
-                            : const Icon(Icons.pets),
-                        title: Text(product.nombre),
-                        subtitle: Text(
-                          'Cantidad: $quantity\nPrecio: \$${product.precio.toStringAsFixed(2)}',
+                      return Card(
+                        color: Colors.grey.shade800,
+                        elevation: 3,
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Subtotal: \$${(product.precio * quantity).toStringAsFixed(2)}',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              tooltip: 'Quitar del carrito',
-                              onPressed: () {
-                                setState(() {
-                                  widget.cart.remove(product);
-                                });
-                                saveCart();
-                              },
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: product.imagenes.isNotEmpty
+                                    ? Image.network(
+                                        product.imagenes[0],
+                                        width: 70,
+                                        height: 70,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                          width: 70,
+                                          height: 70,
+                                          color: Colors.grey.shade700,
+                                          child: Icon(Icons.pets,
+                                              color: Colors.white
+                                                  .withOpacity(0.7)),
+                                        ),
+                                      )
+                                    : Container(
+                                        width: 70,
+                                        height: 70,
+                                        color: Colors.grey.shade700,
+                                        child: Icon(Icons.pets,
+                                            color:
+                                                Colors.white.withOpacity(0.7)),
+                                      ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product.nombre,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Cantidad: $quantity',
+                                      style: const TextStyle(
+                                          fontSize: 14, color: Colors.white70),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Precio: \$${(product.precio * quantity).toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                          fontSize: 14, color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete,
+                                    color: Colors.redAccent),
+                                tooltip: 'Quitar del carrito',
+                                onPressed: () {
+                                  setState(() {
+                                    widget.cart.remove(product);
+                                  });
+                                  saveCart();
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                        isThreeLine: true,
                       );
                     }).toList(),
                   ),
                 ),
-                const Divider(),
-                // ComboBox de cuentas
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: fetchCuentasUsuario(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      );
-                    } else if (snapshot.hasError) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child:
-                            Text('Error al cargar cuentas: ${snapshot.error}'),
-                      );
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text('No tienes cuentas registradas.'),
-                      );
-                    }
-                    final cuentas = snapshot.data!;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: DropdownButtonFormField<int>(
-                        decoration: const InputDecoration(
-                          labelText: 'Selecciona una cuenta para pagar',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: cuentaSeleccionada,
-                        items: cuentas.map((cuenta) {
-                          return DropdownMenuItem<int>(
-                            value: cuenta['cuenta_id'],
-                            child: Text(
-                              'Cuenta #${cuenta['cuenta_id']} - Saldo: \$${cuenta['saldo'].toStringAsFixed(2)}',
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          final cuenta = cuentas
-                              .firstWhere((c) => c['cuenta_id'] == value);
-                          setState(() {
-                            cuentaSeleccionada = value;
-                            saldoSeleccionado = cuenta['saldo']?.toDouble();
-                          });
-                        },
-                      ),
-                    );
-                  },
-                ),
-                // Campo para dirección de envío
-                Padding(
+                // Contenedor principal de los elementos de pago y total
+                Container(
                   padding: const EdgeInsets.all(16.0),
-                  child: TextField(
-                    controller: direccionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Dirección de envío',
-                      border: OutlineInputBorder(),
-                    ),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade800,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Subtotal:'),
-                          Text('\$${subtotal.toStringAsFixed(2)}'),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('IVA (15%):'),
-                          Text('\$${iva.toStringAsFixed(2)}'),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Total:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            '\$${total.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                      // Dropdown de cuentas
+                      FutureBuilder<List<Map<String, dynamic>>>(
+                        future: fetchCuentasUsuario(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16.0),
+                              child: CircularProgressIndicator(),
+                            );
+                          } else if (snapshot.hasError) {
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16.0),
+                              child: Text(
+                                  'Error al cargar cuentas: ${snapshot.error}',
+                                  style: const TextStyle(color: Colors.red)),
+                            );
+                          } else if (!snapshot.hasData ||
+                              snapshot.data!.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16.0),
+                              child: Text('No tienes cuentas registradas.',
+                                  style: TextStyle(color: Colors.white70)),
+                            );
+                          }
+                          final cuentas = snapshot.data!;
+                          return DropdownButtonFormField<int>(
+                            style: const TextStyle(color: Colors.white),
+                            dropdownColor: Colors.grey.shade800,
+                            decoration: InputDecoration(
+                              labelText: 'Selecciona una cuenta',
+                              labelStyle: TextStyle(color: primaryColor),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide(
+                                    color: primaryColor.withOpacity(0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide:
+                                    BorderSide(color: primaryColor, width: 2.0),
+                              ),
+                            ),
+                            value: cuentaSeleccionada,
+                            items: cuentas.map((cuenta) {
+                              return DropdownMenuItem<int>(
+                                value: cuenta['cuenta_id'],
+                                child: Text(
+                                  'Cuenta #${cuenta['cuenta_id']} - Saldo: \$${cuenta['saldo'].toStringAsFixed(2)}',
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              final cuenta = cuentas
+                                  .firstWhere((c) => c['cuenta_id'] == value);
+                              setState(() {
+                                cuentaSeleccionada = value;
+                                saldoSeleccionado = cuenta['saldo']?.toDouble();
+                              });
+                            },
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
+                      // Campo de dirección
+                      TextField(
+                        controller: direccionController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'Dirección de envío',
+                          labelStyle: TextStyle(color: primaryColor),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(
+                                color: primaryColor.withOpacity(0.5)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide:
+                                BorderSide(color: primaryColor, width: 2.0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Resumen de la compra
+                      _buildSummaryRow(
+                          'Subtotal:', '\$${subtotal.toStringAsFixed(2)}'),
+                      _buildSummaryRow(
+                          'IVA (15%):', '\$${iva.toStringAsFixed(2)}'),
+                      const Divider(color: Colors.white12, height: 16),
+                      _buildSummaryRow(
+                        'Total:',
+                        '\$${total.toStringAsFixed(2)}',
+                        isTotal: true,
+                      ),
+                      const SizedBox(height: 24),
+                      // Botón de pagar
                       SizedBox(
                         width: double.infinity,
+                        height: 50,
                         child: ElevatedButton(
-                          onPressed: cuentaSeleccionada == null ||
+                          onPressed: widget.cart.isEmpty ||
+                                  cuentaSeleccionada == null ||
                                   direccionController.text.trim().isEmpty
                               ? null
                               : () async {
@@ -313,21 +411,28 @@ class _CartPageState extends State<CartPage> {
                                     context: context,
                                     direccion: direccionController.text.trim(),
                                     onCompraExitosa: () async {
+                                      // Vacia el carrito localmente y en el almacenamiento
                                       setState(() {
                                         widget.cart.clear();
                                         direccionController.clear();
+                                        cuentaSeleccionada = null;
                                       });
                                       final prefs =
                                           await SharedPreferences.getInstance();
                                       await prefs.remove('cart');
-                                      // Después de esto, se muestra el dialogo y luego se navega
+                                      // Muestra el dialogo de éxito
                                       showDialog(
                                         context: context,
                                         builder: (context) => AlertDialog(
+                                          backgroundColor: Colors.grey.shade800,
                                           title: const Text(
-                                              '¡Gracias por tu compra!'),
+                                              '¡Gracias por tu compra!',
+                                              style: TextStyle(
+                                                  color: Colors.white)),
                                           content: const Text(
-                                              'El pago se ha realizado con éxito.'),
+                                              'El pago se ha realizado con éxito.',
+                                              style: TextStyle(
+                                                  color: Colors.white70)),
                                           actions: [
                                             TextButton(
                                               onPressed: () {
@@ -336,7 +441,9 @@ class _CartPageState extends State<CartPage> {
                                                 Navigator.of(context).pop(
                                                     'compra_exitosa'); // Cierra la pantalla del carrito
                                               },
-                                              child: const Text('OK'),
+                                              child: const Text('OK',
+                                                  style: TextStyle(
+                                                      color: Colors.blue)),
                                             ),
                                           ],
                                         ),
@@ -344,7 +451,30 @@ class _CartPageState extends State<CartPage> {
                                     },
                                   );
                                 },
-                          child: const Text('Pagar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: (widget.cart.isEmpty ||
+                                    cuentaSeleccionada == null ||
+                                    direccionController.text.trim().isEmpty)
+                                ? Colors.grey.withOpacity(0.5)
+                                : primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 5,
+                          ),
+                          child: Text(
+                            widget.cart.isEmpty
+                                ? 'Carrito vacío'
+                                : (cuentaSeleccionada == null ||
+                                        direccionController.text.trim().isEmpty)
+                                    ? 'Completa los campos'
+                                    : 'Pagar',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -352,6 +482,33 @@ class _CartPageState extends State<CartPage> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isTotal ? 18 : 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: isTotal ? primaryColor : Colors.white70,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isTotal ? 18 : 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: isTotal ? primaryColor : Colors.white,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
